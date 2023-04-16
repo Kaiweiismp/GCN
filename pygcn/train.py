@@ -9,44 +9,43 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-from utils import load_data, accuracy
+from batch_test import *
+
+from utils import load_data, load_data_recommendation, accuracy
+
 #from models import GCN
 import models
-# Training settings
-parser = argparse.ArgumentParser()
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='Disables CUDA training.')
-parser.add_argument('--fastmode', action='store_true', default=False,
-                    help='Validate during training pass.')
-parser.add_argument('--model_type', nargs='?', default='GCN',
-                        help='Specify the name of model.')
-parser.add_argument('--seed', type=int, default=42, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=10,
-                    help='Number of epochs to train.')
-parser.add_argument('--lr', type=float, default=0.01,
-                    help='Initial learning rate.')
-parser.add_argument('--weight_decay', type=float, default=5e-4,
-                    help='Weight decay (L2 loss on parameters).')
-parser.add_argument('--hidden', type=int, default=16,
-                    help='Number of hidden units.')
-parser.add_argument('--dropout', type=float, default=0.5,
-                    help='Dropout rate (1 - keep probability).')
 
-args = parser.parse_args()
+
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-
+print('arge.cuda: ',args.cuda)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 # Load data
-adj, features, labels, idx_train, idx_val, idx_test = load_data()
+if(args.dataset == 'cora'):
+    adj, features, labels, idx_train, idx_val, idx_test = load_data(args.path, args.dataset)
+elif(args.dataset == 'personality2018'):
+    #adj, features, labels, idx_train, idx_val, idx_test = load_data_recommendation(args.path, args.dataset)
+    #adj_mat, exist_users, n_train, n_test, n_users, n_items, train_items, test_set = load_data_recommendation(args.path, args.dataset)
+    plain_adj, norm_adj, mean_adj, plain_adj_personality, norm_adj_personality, mean_adj_personality = data_generator.get_adj_mat()
+
+
+exit()
+
 
 # Model and optimizer
 model = models
 if(args.model_type == 'GCN'):
     model = models.GCN(nuser=features.shape[0],
+                            nfeat=features.shape[1],
+                            nhid=args.hidden,
+                            nclass=labels.max().item() + 1,
+                            dropout=args.dropout)
+elif(args.model_type == 'NGCF'):
+    model = models.NGCF(nuser=features.shape[0],
                             nfeat=features.shape[1],
                             nhid=args.hidden,
                             nclass=labels.max().item() + 1,
@@ -57,11 +56,20 @@ elif(args.model_type == 'LightGCN'):
                             nhid=args.hidden,
                             nclass=labels.max().item() + 1,
                             dropout=args.dropout)
+elif(args.model_type == 'GAT'):
+    model = models.GAT(nuser=features.shape[0],
+                            nfeat=features.shape[1], 
+                            nhid=args.hidden, 
+                            nclass=int(labels.max()) + 1, 
+                            dropout=args.dropout, 
+                            nheads=args.nb_heads, 
+                            alpha=args.alpha)
 
 optimizer = optim.Adam(model.parameters(),
                        lr=args.lr, weight_decay=args.weight_decay)
 
 if args.cuda:
+    print('Use GPU')
     model.cuda()
     features = features.cuda()
     adj = adj.cuda()
@@ -74,6 +82,38 @@ print("==============================================")
 print(model)
 
 def train(epoch):
+
+    loss, mf_loss, emb_loss = 0., 0., 0.
+    n_batch = n_train // args.batch_size + 1
+
+##############################################################################
+
+    for idx in range(n_batch):
+        users, pos_items, neg_items = data_generator.sample()
+        u_g_embeddings, pos_i_g_embeddings, neg_i_g_embeddings = model(users,
+                                                                       pos_items,
+                                                                       neg_items,
+                                                                       drop_flag=args.node_dropout_flag)
+        
+        batch_loss, batch_mf_loss, batch_emb_loss = model.create_bpr_loss(u_g_embeddings,
+                                                                          pos_i_g_embeddings,
+                                                                          neg_i_g_embeddings)
+        optimizer.zero_grad()
+        batch_loss.backward()
+        optimizer.step()
+
+        loss += batch_loss
+        mf_loss += batch_mf_loss
+        emb_loss += batch_emb_loss
+
+
+
+
+
+
+
+##############################################################################
+
     t = time.time()
     model.train()
     optimizer.zero_grad()
