@@ -2,10 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch 
 
-from layers import GraphConvolution
-from layers import GraphNGCF
-from layers import GraphLightGCN
-from layers import GraphGAT
+from layers import *
 
 
 
@@ -45,6 +42,8 @@ class NGCF(nn.Module):
         x = self.gc2(x, adj)
         
         return F.log_softmax(x, dim=1)
+
+
 
 
 class LightGCN(nn.Module):

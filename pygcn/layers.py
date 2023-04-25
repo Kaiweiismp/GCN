@@ -4,6 +4,8 @@ import torch
 
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class GraphConvolution(Module):
@@ -61,8 +63,6 @@ class GraphNGCF(Module):
         stdv = 1. / math.sqrt(self.weight_bi_b.size(1))
         self.weight_bi_b.data.uniform_(-stdv, stdv)
 
-
-
     def forward(self, input, adj):
         side_embeddings = torch.mm(adj, input)
         sum_embeddings = torch.matmul(side_embeddings, self.weight_gc_W) + self.weight_gc_b
@@ -78,7 +78,6 @@ class GraphNGCF(Module):
         return self.__class__.__name__ + ' (' \
                + str(self.in_features) + ' -> ' \
                + str(self.out_features) + ')'
-
 
 
 class GraphLightGCN(Module):

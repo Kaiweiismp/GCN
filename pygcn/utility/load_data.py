@@ -21,7 +21,6 @@ class Data(object):
         
         train_file = path + dataset + '/train.txt'
         test_file = path + dataset + '/test.txt'
-
         personality_file = path + dataset + '/personality.txt'
 
         #get number of users and items
@@ -69,10 +68,8 @@ class Data(object):
                     self.personality_users.append(temp)
 
         self.print_statistics()
-        #self.print_personality()
 
         self.get_nearest_neighbor()
-        #self.print_nearest_neighbor()
 
         self.R = sp.dok_matrix((self.n_users, self.n_items), dtype=np.float32)
         self.R_p = sp.dok_matrix((self.n_users, self.n_items), dtype=np.float32)
@@ -280,22 +277,6 @@ class Data(object):
         print('n_interactions=%d' % (self.n_train + self.n_test))
         print('n_train=%d, n_test=%d, sparsity=%.5f' % (self.n_train, self.n_test, (self.n_train + self.n_test)/(self.n_users * self.n_items)))
 
-    def print_personality(self):
-        print(self.personality_users[0])
-        print(self.personality_users[1])
-        print(self.personality_users[2])
-        print(self.personality_users[3])
-        print(self.personality_users[4])
-        print(self.personality_users[self.n_users - 1])
-
-    def print_nearest_neighbor(self):
-        print("\n")
-        print(self.nearest_neighbor[0])
-        print(self.nearest_neighbor[1])
-        print(self.nearest_neighbor[2])
-        print(self.nearest_neighbor[3])
-        print(self.nearest_neighbor[4])
-        print(self.nearest_neighbor[self.n_users - 1])
 
     def get_sparsity_split(self):
         try:

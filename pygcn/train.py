@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-from batch_test import *
+from pygcn.utility.batch_test import *
 
 from utils import load_data, load_data_recommendation, accuracy
 
@@ -31,9 +31,8 @@ elif(args.dataset == 'personality2018'):
     #adj, features, labels, idx_train, idx_val, idx_test = load_data_recommendation(args.path, args.dataset)
     #adj_mat, exist_users, n_train, n_test, n_users, n_items, train_items, test_set = load_data_recommendation(args.path, args.dataset)
     plain_adj, norm_adj, mean_adj, plain_adj_personality, norm_adj_personality, mean_adj_personality = data_generator.get_adj_mat()
+    
 
-
-exit()
 
 
 # Model and optimizer
@@ -65,8 +64,8 @@ elif(args.model_type == 'GAT'):
                             nheads=args.nb_heads, 
                             alpha=args.alpha)
 
-optimizer = optim.Adam(model.parameters(),
-                       lr=args.lr, weight_decay=args.weight_decay)
+cur_best_pre_0, stopping_step = 0, 0
+optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
 if args.cuda:
     print('Use GPU')
@@ -83,38 +82,8 @@ print(model)
 
 def train(epoch):
 
-    loss, mf_loss, emb_loss = 0., 0., 0.
-    n_batch = n_train // args.batch_size + 1
 
-##############################################################################
-
-    for idx in range(n_batch):
-        users, pos_items, neg_items = data_generator.sample()
-        u_g_embeddings, pos_i_g_embeddings, neg_i_g_embeddings = model(users,
-                                                                       pos_items,
-                                                                       neg_items,
-                                                                       drop_flag=args.node_dropout_flag)
-        
-        batch_loss, batch_mf_loss, batch_emb_loss = model.create_bpr_loss(u_g_embeddings,
-                                                                          pos_i_g_embeddings,
-                                                                          neg_i_g_embeddings)
-        optimizer.zero_grad()
-        batch_loss.backward()
-        optimizer.step()
-
-        loss += batch_loss
-        mf_loss += batch_mf_loss
-        emb_loss += batch_emb_loss
-
-
-
-
-
-
-
-##############################################################################
-
-    t = time.time()
+    t = time()
     model.train()
     optimizer.zero_grad()
     output = model(features, adj)
@@ -136,7 +105,7 @@ def train(epoch):
           'acc_train: {:.4f}'.format(acc_train.item()),
           'loss_val: {:.4f}'.format(loss_val.item()),
           'acc_val: {:.4f}'.format(acc_val.item()),
-          'time: {:.4f}s'.format(time.time() - t))
+          'time: {:.4f}s'.format(time() - t))
 
 
 def test():
@@ -150,11 +119,11 @@ def test():
 
 
 # Train model
-t_total = time.time()
+t_total = time()
 for epoch in range(args.epochs):
     train(epoch)
 print("Optimization Finished!")
-print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+print("Total time elapsed: {:.4f}s".format(time() - t_total))
 
 # Testing
 test()
