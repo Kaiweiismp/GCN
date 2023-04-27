@@ -48,13 +48,6 @@ class GraphNewNGCF(Module):
         self.weight_bi_b = Parameter(initializer(torch.empty(1, out_features)))
 
 
-        self.weight_New_gc_W = nn.Parameter(initializer(torch.empty(in_features, out_features)))
-        self.weight_New_gc_b = Parameter(initializer(torch.empty(1, out_features)))
-
-        self.weight_New_bi_W = Parameter(initializer(torch.empty(in_features, out_features)))
-        self.weight_New_bi_b = Parameter(initializer(torch.empty(1, out_features)))
-
-
     def forward(self, adj, input, New_adj, New_input):
         side_embeddings = torch.mm(adj, input)
         sum_embeddings = torch.matmul(side_embeddings, self.weight_gc_W) + self.weight_gc_b
@@ -65,10 +58,10 @@ class GraphNewNGCF(Module):
         output = sum_embeddings + bi_embeddings
 
         New_side_embeddings = torch.mm(New_adj, New_input)
-        New_sum_embeddings = torch.matmul(New_side_embeddings, self.weight_New_gc_W) + self.weight_New_gc_b
+        New_sum_embeddings = torch.matmul(New_side_embeddings, self.weight_gc_W) + self.weight_gc_b
 
         New_bi_embeddings = torch.mm(New_adj, New_side_embeddings)
-        New_bi_embeddings = torch.matmul(New_bi_embeddings, self.weight_New_bi_W) + self.weight_New_bi_b
+        New_bi_embeddings = torch.matmul(New_bi_embeddings, self.weight_bi_W) + self.weight_bi_b
 
         New_output = New_sum_embeddings + New_bi_embeddings
         

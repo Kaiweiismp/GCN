@@ -182,7 +182,7 @@ def test(model, users_to_test, w, epoch, drop_flag=False, batch_test_flag=False)
             result['auc'] += re['auc']/n_test_users
             K_max_item_result.append(re['K_max'])
 
-    if args.tensorboard:
+    if w != None:
             for k in range (len(Ks)):
                 w.add_scalars(f'Test_precision/{Ks[k]}', {str(args.Ks[k]): result['precision'][k]}, epoch+1)
                 w.add_scalars(f'Test_Recall/{Ks[k]}', {str(args.Ks[k]): result['recall'][k]}, epoch+1)

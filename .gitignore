@@ -1,3 +1,4 @@
 
 *.pyc
 /pygcn/board
+/pygcn/Record

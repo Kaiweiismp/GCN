@@ -4,8 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from utility.NGCF_layer import GraphNGCF as layer
-from utility.NGCF_layer import GraphNewNGCF as Newlayer
+from utility.model.layer.NGCF_layer import GraphNGCF as layer
 
 class NGCF(nn.Module):
     def __init__(self, n_user, n_item, norm_adj, norm_adj_personality, args):
@@ -24,7 +23,7 @@ class NGCF(nn.Module):
         self.mess_dropout = args.mess_dropout
 
         self.norm_adj = norm_adj
-        self.norm_adj_personality = norm_adj_personality
+#        self.norm_adj_personality = norm_adj_personality
 
         self.layers = eval(args.layer_size)
         self.decay = eval(args.regs)[0]
@@ -41,11 +40,11 @@ class NGCF(nn.Module):
         Get sparse adj.
         """
         self.sparse_norm_adj = self._convert_sp_mat_to_sp_tensor(self.norm_adj).to(self.device)
-        self.sparse_norm_adj_personality = self._convert_sp_mat_to_sp_tensor(self.norm_adj_personality).to(self.device)
+#        self.sparse_norm_adj_personality = self._convert_sp_mat_to_sp_tensor(self.norm_adj_personality).to(self.device)
 
-        self.gc1 = Newlayer(self.emb_size, self.emb_size)
-        self.gchid = Newlayer(self.emb_size, self.emb_size)
-        self.gc2 = Newlayer(self.emb_size, self.emb_size)
+        self.gc1 = layer(self.emb_size, self.emb_size)
+        self.gchid = layer(self.emb_size, self.emb_size)
+        self.gc2 = layer(self.emb_size, self.emb_size)
 
     def init_weight(self):
         # xavier init
@@ -55,11 +54,11 @@ class NGCF(nn.Module):
             'user_emb': nn.Parameter(initializer(torch.empty(self.n_user,
                                                  self.emb_size))),
             'item_emb': nn.Parameter(initializer(torch.empty(self.n_item,
-                                                 self.emb_size))),
-            'New_user_emb': nn.Parameter(initializer(torch.empty(self.n_user,
-                                                 self.emb_size))),
-            'New_item_emb': nn.Parameter(initializer(torch.empty(self.n_item,
-                                                 self.emb_size)))                                                                     
+                                                 self.emb_size)))
+#            'New_user_emb': nn.Parameter(initializer(torch.empty(self.n_user,
+#                                                 self.emb_size))),
+#            'New_item_emb': nn.Parameter(initializer(torch.empty(self.n_item,
+#                                                 self.emb_size)))                                                                     
             })
 
         
@@ -116,48 +115,48 @@ class NGCF(nn.Module):
         all_embeddings = [ego_embeddings]
 
 
-        A_hat_personality = self.sparse_dropout(self.sparse_norm_adj_personality,
-                                    self.node_dropout,
-                                    self.sparse_norm_adj_personality._nnz()) if drop_flag else self.sparse_norm_adj_personality
+#        A_hat_personality = self.sparse_dropout(self.sparse_norm_adj_personality,
+#                                    self.node_dropout,
+#                                    self.sparse_norm_adj_personality._nnz()) if drop_flag else self.sparse_norm_adj_personality
+#
+#        ego_personality_embeddings = torch.cat([self.embedding_dict['New_user_emb'],
+#                                    self.embedding_dict['New_item_emb']], 0)
+#        
+#        all_personality_embeddings = [ego_personality_embeddings]
 
-        ego_personality_embeddings = torch.cat([self.embedding_dict['New_user_emb'],
-                                    self.embedding_dict['New_item_emb']], 0)
-        
-        all_personality_embeddings = [ego_personality_embeddings]
 
-
-        x, New_x = self.gc1(A_hat, ego_embeddings, A_hat_personality, ego_personality_embeddings)
+        x = self.gc1(A_hat, ego_embeddings)
         x = F.relu(x)
-        New_x = F.relu(New_x)
+#        New_x = F.relu(New_x)
         all_embeddings += [x]
-        all_personality_embeddings += [New_x]
+#        all_personality_embeddings += [New_x]
 
         for k in range(1, len(self.layers)-1):
-            x, New_x = self.gchid(A_hat, x, A_hat_personality, New_x)
+            x = self.gchid(A_hat, x)
             x = F.relu(x)
-            New_x = F.relu(New_x)
+#            New_x = F.relu(New_x)
             all_embeddings += [x]
-            all_personality_embeddings += [New_x]
+#            all_personality_embeddings += [New_x]
 
-        x, New_x = self.gc2(A_hat, x, A_hat_personality, New_x)
+        x = self.gc2(A_hat, x)
         all_embeddings += [x]
-        all_personality_embeddings += [New_x]
+#        all_personality_embeddings += [New_x]
 
         all_embeddings = torch.cat(all_embeddings, 1)
-        all_personality_embeddings = torch.cat(all_personality_embeddings, 1)
+#        all_personality_embeddings = torch.cat(all_personality_embeddings, 1)
 
         u_g_embeddings = all_embeddings[:self.n_user, :]
         i_g_embeddings = all_embeddings[self.n_user:, :]
 
-        u_g_personality_embeddings = all_personality_embeddings[:self.n_user, :]
-        i_g_personality_embeddings = all_personality_embeddings[self.n_user:, :]
+#        u_g_personality_embeddings = all_personality_embeddings[:self.n_user, :]
+#        i_g_personality_embeddings = all_personality_embeddings[self.n_user:, :]
 
 
-        u_embeddings = u_g_embeddings + u_g_personality_embeddings
-        i_embeddings = i_g_embeddings + i_g_personality_embeddings
+#        u_embeddings = u_g_embeddings + u_g_personality_embeddings
+#        i_embeddings = i_g_embeddings + i_g_personality_embeddings
 
-#        u_embeddings = u_g_embeddings
-#        i_embeddings = i_g_embeddings
+        u_embeddings = u_g_embeddings
+        i_embeddings = i_g_embeddings
 
         #print("u_embeddings : ", u_embeddings.size())
         #print("u_g_embeddings : ", u_g_embeddings.size())
